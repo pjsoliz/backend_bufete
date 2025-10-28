@@ -1,0 +1,9 @@
+export { Oficina } from './oficina.entity';
+export { AreaDerecho } from './area-derecho.entity';
+export { TipoCaso } from './tipo-caso.entity';
+export { TipoCita } from './tipo-cita.entity';
+export { Usuario } from './usuario.entity';
+export { Cliente } from './cliente.entity';
+export { Abogado } from './abogado.entity';
+export { Cita } from './cita.entity';
+export { Notificacion } from './notificacion.entity';
