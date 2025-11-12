@@ -1,35 +1,51 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // CORS Configuration
   app.enableCors({
     origin: process.env.CORS_ORIGIN || 'http://localhost:4200',
     credentials: true,
   });
 
-  // Global Prefix
   app.setGlobalPrefix('api');
 
-  // Global Validation Pipe
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Elimina propiedades no definidas en el DTO
-      forbidNonWhitelisted: true, // Lanza error si hay propiedades no permitidas
-      transform: true, // Transforma los objetos a las instancias del DTO
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
       transformOptions: {
-        enableImplicitConversion: true, // Convierte tipos automáticamente
+        enableImplicitConversion: true,
       },
     }),
   );
+
+  // ⭐ CONFIGURACIÓN DE SWAGGER
+  const config = new DocumentBuilder()
+    .setTitle('Bufete Genesis API')
+    .setDescription('API para sistema de gestión de citas del Bufete Genesis Integrales')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .addTag('auth', 'Autenticación y autorización')
+    .addTag('citas', 'Gestión de citas')
+    .addTag('clientes', 'Gestión de clientes')
+    .addTag('abogados', 'Gestión de abogados')
+    .addTag('reportes', 'Reportes y estadísticas')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
+  // ⭐ FIN CONFIGURACIÓN
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
 
   console.log(`🚀 Servidor corriendo en: http://localhost:${port}/api`);
+  console.log(`📚 Documentación Swagger: http://localhost:${port}/api/docs`);
   console.log(`📊 Entorno: ${process.env.NODE_ENV || 'development'}`);
 }
 

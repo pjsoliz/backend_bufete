@@ -162,3 +162,72 @@ export class FilterCitasDto {
   @IsEnum(['alta', 'media', 'baja'])
   urgencia?: string;
 }
+
+// ============================================
+// 🆕 NUEVOS DTOs PARA EL AGENTE (n8n)
+// ============================================
+
+export class VerificarClienteAgenteDto {
+  @IsString()
+  @IsNotEmpty()
+  user_id_plataforma: string;
+
+  @IsString()
+  @IsNotEmpty()
+  plataforma: string;
+}
+
+export class CrearCitaAgenteDto {
+  @IsString()
+  @IsNotEmpty()
+  user_id_plataforma: string;
+
+  @IsString()
+  @IsNotEmpty()
+  plataforma: string;
+
+  @IsString()
+  @IsNotEmpty()
+  nombre_completo: string;
+
+  @IsString()
+  @IsNotEmpty()
+  telefono: string;
+
+  @IsString()
+  @IsOptional()
+  email?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  especialidad: string; // 'Civil', 'Familiar', 'Penal'
+
+  @IsString()
+  @IsNotEmpty()
+  descripcion: string;
+
+  @IsEnum(['alta', 'media', 'baja'])
+  urgencia: 'alta' | 'media' | 'baja';
+
+  @IsString()
+  @IsNotEmpty()
+  fecha: string; // 'YYYY-MM-DD'
+
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
+  hora: string; // 'HH:MM'
+}
+
+export class ConsultarDisponibilidadDto {
+  @IsString()
+  @IsNotEmpty()
+  especialidad: string;
+
+  @IsEnum(['alta', 'media', 'baja'])
+  urgencia: string;
+
+  @IsString()
+  @IsOptional()
+  fecha_deseada?: string;
+}
