@@ -54,6 +54,53 @@ export class CitasController {
   async findAll(@Query() filterDto: FilterCitasDto): Promise<Cita[]> {
     return this.citasService.findAll(filterDto);
   }
+  // ============================================
+  // 🆕 ENDPOINTS PARA NOTIFICACIONES Y RECORDATORIOS
+  // ============================================
+
+  @Public()
+@Get('proximas-hora')
+async getCitasProximasHora() {
+  const ahora = new Date();
+  
+  // ⚠️ TEMPORAL PARA PRUEBAS: 70-74 horas (aproximadamente 3 días)
+  const unaHoraDespues = new Date(ahora.getTime() + 1 * 60 * 60 * 1000);
+  const dosHorasDespues = new Date(ahora.getTime() + 2 * 60 * 60 * 1000);
+  
+  console.log('🔍 BUSCANDO CITAS PARA RECORDATORIO:');
+  console.log('  ⏰ Hora actual:', ahora.toLocaleString('es-BO'));
+  console.log('  📅 Desde:', unaHoraDespues.toLocaleString('es-BO'));
+  console.log('  📅 Hasta:', dosHorasDespues.toLocaleString('es-BO'));
+  
+  const citas = await this.citasService.findAll({
+    estado: 'confirmada'
+  });
+  
+  const citasProximas = citas.filter(cita => {
+    // ✅ CONVERTIR FECHA STRING SIN ZONA HORARIA
+    const [year, month, day] = cita.fecha.split('-').map(Number);
+    const [horas, minutos] = cita.hora.split(':').map(Number);
+    const fechaHoraCita = new Date(year, month - 1, day, horas, minutos, 0, 0);
+    
+    const dentroRango = fechaHoraCita >= unaHoraDespues && fechaHoraCita <= dosHorasDespues;
+    const noEnviado = !cita.recordatorioEnviado;
+    
+    if (dentroRango && noEnviado) {
+      console.log('  ✅ Cita encontrada:', {
+        id: cita.id,
+        fecha: cita.fecha,
+        hora: cita.hora,
+        cliente: cita.cliente?.nombreCompleto || 'Sin nombre'
+      });
+    }
+    
+    return dentroRango && noEnviado;
+  });
+  
+  console.log(`  📊 Total citas encontradas: ${citasProximas.length}`);
+  
+  return citasProximas;
+}
 
   @Get(':id')
   async findOne(@Param('id') id: string): Promise<Cita> {
@@ -94,14 +141,11 @@ export class CitasController {
   async findByCliente(@Param('id') clienteId: string): Promise<Cita[]> {
     return this.citasService.findByCliente(clienteId);
   }
+
   // ============================================
-  // 🆕 ENDPOINTS PARA EL AGENTE (n8n)
+  // ENDPOINTS PARA EL AGENTE (n8n)
   // ============================================
 
-  /**
-   * Endpoint 1: Verificar si un cliente existe
-   * Usado por n8n para saber si es cliente nuevo o recurrente
-   */
   @Public()
   @Post('agente/verificar-cliente')
   @HttpCode(HttpStatus.OK)
@@ -143,10 +187,6 @@ export class CitasController {
     }
   }
 
-  /**
-   * Endpoint 2: Crear cita desde el agente (n8n)
-   * Este es el endpoint principal que n8n llamará
-   */
   @Public()
   @Post('agente/crear')
   @HttpCode(HttpStatus.CREATED)
@@ -158,6 +198,7 @@ export class CitasController {
       nombre_completo: string;
       telefono: string;
       email?: string;
+      abogado_nombre?: string;
       especialidad: string;
       descripcion: string;
       urgencia: 'alta' | 'media' | 'baja';
@@ -175,10 +216,6 @@ export class CitasController {
     }
   }
 
-  /**
-   * Endpoint 3: Consultar disponibilidad
-   * Usado por n8n para sugerir horarios al usuario
-   */
   @Public()
   @Post('agente/disponibilidad')
   @HttpCode(HttpStatus.OK)
@@ -209,10 +246,6 @@ export class CitasController {
     }
   }
 
-  /**
-   * Endpoint 4: Obtener citas de un cliente por plataforma
-   * Para que el bot pueda consultar citas existentes
-   */
   @Public()
   @Get('agente/mis-citas/:user_id_plataforma/:plataforma')
   async obtenerCitasClientePorPlataforma(
@@ -254,6 +287,52 @@ export class CitasController {
         error: error.message,
         citas: [],
       };
+    }
+  }
+
+  @Public()
+  @Patch(':id/recordatorio-enviado')
+  async marcarRecordatorioEnviado(@Param('id') id: string) {
+    const cita = await this.citasService.findOne(id);
+    return await this.citasService.update(id, { recordatorioEnviado: true } as any);
+  }
+
+  @Public()
+  @Post('notificar-cambio-estado')
+  async notificarCambioEstado(@Body() body: any) {
+    const cita = await this.citasService.findOne(body.citaId);
+    
+    const datosNotificacion = {
+      cita_id: cita.id,
+      estado: cita.estado,
+      estado_anterior: body.estadoAnterior || 'pendiente',
+      cliente_nombre: cita.cliente.nombreCompleto,
+      cliente_telefono: cita.cliente.telefono,
+      cliente_telegram_id: cita.cliente.userIdPlataforma,
+      abogado_nombre: cita.abogado.nombre,
+      abogado_telegram_id: cita.abogado.userIdTelegram,
+      fecha: cita.fecha,
+      hora: cita.hora,
+      especialidad: cita.areaDerecho.nombre,
+      usuario_nombre: body.usuarioNombre || 'Sistema',
+      motivo_cancelacion: cita.motivoCancelacion || null
+    };
+    
+    const webhookUrl = process.env.N8N_WEBHOOK_NOTIFICACIONES || 
+                       'http://localhost:5678/webhook/notificar-cambio-estado';
+    
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(datosNotificacion)
+      });
+      
+      const result = await response.json();
+      return { success: true, mensaje: 'Notificaciones enviadas', data: result };
+    } catch (error) {
+      console.error('Error al notificar cambio de estado:', error);
+      return { success: false, mensaje: 'Error al enviar notificaciones', error: error.message };
     }
   }
 }

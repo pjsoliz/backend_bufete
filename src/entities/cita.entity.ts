@@ -34,7 +34,7 @@ export class Cita {
 
   // Datos de la cita
   @Column({ type: 'date' })
-  fecha: Date;
+  fecha: string;  // ✅ CAMBIO: Date → string
 
   @Column({ type: 'time' })
   hora: string;

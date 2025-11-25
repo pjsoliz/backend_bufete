@@ -1,8 +1,9 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { Usuario } from '../entities/usuario.entity';
 import { LoginDto, RegisterDto, LoginResponseDto } from './dto/auth.dto';
 
@@ -108,5 +109,85 @@ export class AuthService {
     }
 
     return null;
+  }
+
+  // ⭐ RECUPERAR CONTRASEÑA - Genera token y lo guarda en BD
+  async recuperarContrasena(email: string): Promise<void> {
+    const usuario = await this.usuarioRepository.findOne({
+      where: { email },
+    });
+
+    // Por seguridad, no revelamos si el email existe o no
+    if (!usuario) {
+      console.log(`Intento de recuperación con email no registrado: ${email}`);
+      return;
+    }
+
+    // Generar token aleatorio
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = await bcrypt.hash(resetToken, 10);
+
+    // Guardar token y fecha de expiración (1 hora)
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1);
+
+    await this.usuarioRepository.update(usuario.id, {
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: expiresAt,
+    });
+
+    // 🔥 AQUÍ DEBERÍAS ENVIAR EL EMAIL
+    // Por ahora, solo mostramos el token en los logs para testing
+    console.log('='.repeat(60));
+    console.log('📧 EMAIL DE RECUPERACIÓN DE CONTRASEÑA');
+    console.log('='.repeat(60));
+    console.log(`Para: ${email}`);
+    console.log(`Usuario: ${usuario.nombreCompleto}`);
+    console.log(`Token: ${resetToken}`);
+    console.log(`Expira: ${expiresAt.toLocaleString()}`);
+    console.log(`Link: http://localhost:4200/auth/restablecer-contrasena?token=${resetToken}`);
+    console.log('='.repeat(60));
+
+    // TODO: Implementar envío de email real con nodemailer o servicio de email
+    // await this.emailService.sendPasswordResetEmail(usuario.email, resetToken);
+  }
+
+  // ⭐ RESTABLECER CONTRASEÑA - Valida token y cambia contraseña
+  async restablecerContrasena(token: string, nuevaContrasena: string): Promise<void> {
+    // Buscar usuarios con token de reset válido
+    const usuarios = await this.usuarioRepository.find({
+      where: { activo: true },
+    });
+
+    let usuarioValido: Usuario | null = null;
+
+    // Verificar el token contra todos los usuarios (porque está hasheado)
+    for (const usuario of usuarios) {
+      if (usuario.resetPasswordToken && usuario.resetPasswordExpires) {
+        const isTokenValid = await bcrypt.compare(token, usuario.resetPasswordToken);
+        const isNotExpired = new Date() < usuario.resetPasswordExpires;
+
+        if (isTokenValid && isNotExpired) {
+          usuarioValido = usuario;
+          break;
+        }
+      }
+    }
+
+    if (!usuarioValido) {
+      throw new BadRequestException('Token inválido o expirado');
+    }
+
+    // Hashear nueva contraseña
+    const hashedPassword = await bcrypt.hash(nuevaContrasena, 10);
+
+    // Actualizar contraseña y limpiar token
+    await this.usuarioRepository.update(usuarioValido.id, {
+      password: hashedPassword,
+      resetPasswordToken: null,
+      resetPasswordExpires: null,
+    });
+
+    console.log(`✅ Contraseña restablecida exitosamente para: ${usuarioValido.email}`);
   }
 }

@@ -43,3 +43,22 @@ export class LoginResponseDto {
     rol: string;
   };
 }
+
+// ⭐ AGREGAR ESTOS 2 NUEVOS DTOs
+
+export class RecuperarContrasenaDto {
+  @IsEmail({}, { message: 'El email debe ser válido' })
+  @IsNotEmpty({ message: 'El email es requerido' })
+  email: string;
+}
+
+export class RestablecerContrasenaDto {
+  @IsString()
+  @IsNotEmpty({ message: 'El token es requerido' })
+  token: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'La nueva contraseña es requerida' })
+  @MinLength(6, { message: 'La contraseña debe tener al menos 6 caracteres' })
+  nuevaContrasena: string;
+}

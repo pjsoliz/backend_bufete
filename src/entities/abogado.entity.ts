@@ -23,7 +23,7 @@ export class Abogado {
   oficinaId: string;
 
   @Column({ type: 'varchar', length: 20, name: 'plataforma_notificacion', nullable: true })
-  plataformaNotificacion: string; // 'telegram' o 'whatsapp'
+  plataformaNotificacion: string;
 
   @Column({ type: 'varchar', length: 100, name: 'user_id_telegram', nullable: true })
   userIdTelegram: string;

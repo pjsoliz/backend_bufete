@@ -1,5 +1,4 @@
-import { IsNotEmpty, IsUUID, IsString, IsDate, IsEnum, IsOptional, IsBoolean, Matches } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsNotEmpty, IsUUID, IsString, IsEnum, IsOptional, Matches } from 'class-validator';
 
 export class CreateCitaDto {
   @IsUUID('4', { message: 'El ID del cliente debe ser un UUID válido' })
@@ -26,10 +25,10 @@ export class CreateCitaDto {
   @IsNotEmpty({ message: 'La oficina es requerida' })
   oficinaId: string;
 
-  @Type(() => Date)
-  @IsDate({ message: 'La fecha debe ser válida' })
+  @IsString({ message: 'La fecha debe ser un string' })
   @IsNotEmpty({ message: 'La fecha es requerida' })
-  fecha: Date;
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'La fecha debe estar en formato YYYY-MM-DD' })
+  fecha: string;
 
   @IsString()
   @IsNotEmpty({ message: 'La hora es requerida' })
@@ -82,10 +81,10 @@ export class UpdateCitaDto {
   @IsOptional()
   oficinaId?: string;
 
-  @Type(() => Date)
-  @IsDate()
+  @IsString()
   @IsOptional()
-  fecha?: Date;
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'La fecha debe estar en formato YYYY-MM-DD' })
+  fecha?: string;
 
   @IsString()
   @IsOptional()
@@ -122,21 +121,19 @@ export class UpdateEstadoCitaDto {
 }
 
 export class CreateCitaChatbotDto extends CreateCitaDto {
-  // DTO específico para el endpoint del chatbot
-  // Hereda todo de CreateCitaDto pero origen ya está fijado como 'chatbot'
   origen: 'chatbot';
 }
 
 export class FilterCitasDto {
   @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  fechaInicio?: Date;
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  fechaInicio?: string;
 
   @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  fechaFin?: Date;
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  fechaFin?: string;
 
   @IsOptional()
   @IsEnum(['pendiente', 'confirmada', 'completada', 'cancelada', 'no_asistio'])
@@ -152,7 +149,7 @@ export class FilterCitasDto {
 
   @IsOptional()
   @IsString()
-  busqueda?: string; // Para buscar por nombre de cliente o abogado
+  busqueda?: string;
 
   @IsOptional()
   @IsEnum(['chatbot', 'panel_web', 'presencial'])
@@ -162,10 +159,6 @@ export class FilterCitasDto {
   @IsEnum(['alta', 'media', 'baja'])
   urgencia?: string;
 }
-
-// ============================================
-// 🆕 NUEVOS DTOs PARA EL AGENTE (n8n)
-// ============================================
 
 export class VerificarClienteAgenteDto {
   @IsString()
@@ -200,7 +193,7 @@ export class CrearCitaAgenteDto {
 
   @IsString()
   @IsNotEmpty()
-  especialidad: string; // 'Civil', 'Familiar', 'Penal'
+  especialidad: string;
 
   @IsString()
   @IsNotEmpty()
@@ -211,12 +204,13 @@ export class CrearCitaAgenteDto {
 
   @IsString()
   @IsNotEmpty()
-  fecha: string; // 'YYYY-MM-DD'
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  fecha: string;
 
   @IsString()
   @IsNotEmpty()
   @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
-  hora: string; // 'HH:MM'
+  hora: string;
 }
 
 export class ConsultarDisponibilidadDto {
@@ -229,5 +223,6 @@ export class ConsultarDisponibilidadDto {
 
   @IsString()
   @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
   fecha_deseada?: string;
 }
