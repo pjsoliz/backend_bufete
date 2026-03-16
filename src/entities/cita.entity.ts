@@ -24,12 +24,12 @@ export class Cita {
   areaDerechoId: string;
 
   @Column({ type: 'uuid', name: 'tipo_caso_id' })
-  tipoCasoId: string;
+  tipoCasoId: string |  null;
 
-  @Column({ type: 'uuid', name: 'tipo_cita_id' })
-  tipoCitaId: string;
+  @Column({ type: 'uuid', name: 'tipo_cita_id', nullable: true })
+  tipoCitaId: string | null;
 
-  @Column({ type: 'uuid', name: 'oficina_id' })
+  @Column({ type: 'uuid', name: 'oficina_id', nullable: true  })
   oficinaId: string;
 
   // Datos de la cita

@@ -24,6 +24,8 @@ export class CitasService {
     throw new BadRequestException('No se puede crear una cita en una fecha pasada');
   }
 
+  createCitaDto.origen = createCitaDto.origen || 'panel_web';
+  
   await this.validateCitaDisponibilidad(
     createCitaDto.abogadoId,
     createCitaDto.fecha,
@@ -324,12 +326,15 @@ export class CitasService {
     hora: string;
   }): Promise<any> {
     try {
+      // 🔍 BUSCAR CLIENTE EXISTENTE
       let cliente = await this.buscarClientePorPlataforma(
         data.user_id_plataforma,
         data.plataforma,
       );
 
       if (!cliente) {
+        // ✅ CLIENTE NUEVO - CREAR
+        console.log('👤 Cliente nuevo, creando...');
         cliente = await this.crearClienteDesdeAgente({
           user_id_plataforma: data.user_id_plataforma,
           plataforma: data.plataforma,
@@ -337,6 +342,24 @@ export class CitasService {
           telefono: data.telefono,
           email: data.email,
         });
+        console.log('✅ Cliente creado:', cliente.nombreCompleto);
+      } else {
+        // 🔄 CLIENTE EXISTENTE - ACTUALIZAR DATOS
+        console.log('🔄 Cliente existente encontrado:', {
+          anterior: cliente.nombreCompleto,
+          nuevo: data.nombre_completo
+        });
+        
+        // Actualizar datos del cliente con los nuevos valores
+        cliente.nombreCompleto = data.nombre_completo;
+        cliente.telefono = data.telefono;
+        if (data.email) {
+          cliente.email = data.email;
+        }
+        
+        // Guardar los cambios
+        cliente = await this.clienteRepository.save(cliente);
+        console.log('✅ Cliente actualizado correctamente:', cliente.nombreCompleto);
       }
 
       const areaDerecho = await this.findAreaDerechoByNombre(data.especialidad);
@@ -348,6 +371,13 @@ export class CitasService {
 
       // BUSCAR ABOGADO POR NOMBRE SI SE PROPORCIONÓ
       let abogado = null;
+
+      console.log('📦 DATOS RECIBIDOS:', {
+        abogado_nombre: data.abogado_nombre,
+        tipo: typeof data.abogado_nombre,
+        vacio: !data.abogado_nombre,
+        especialidad: data.especialidad
+      });
 
       if (data.abogado_nombre) {
         console.log('🔍 Buscando abogado por nombre:', data.abogado_nombre);
@@ -610,35 +640,29 @@ export class CitasService {
   // ============================================
 
   private validarHorarioLaboral(hora: string, fecha: Date): { 
-    valido: boolean; 
-    mensaje?: string 
-  } {
-    const diaSemana = fecha.getDay();
-    
-    const nombresDias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    console.log('🔍 DEBUG HORARIO LABORAL:');
-    console.log('  📅 Fecha:', fecha.toLocaleDateString('es-BO'));
-    console.log('  📆 Día:', nombresDias[diaSemana]);
-    console.log('  ⏰ Hora solicitada:', hora);
-    
-    if (diaSemana === 0 || diaSemana === 6) {
-      return {
-        valido: false,
-        mensaje: 'Solo se atiende de lunes a viernes'
-      };
-    }
-
-    const horariosPermitidos = ['08:00', '09:00', '10:00', '11:00'];
-    
-    if (!horariosPermitidos.includes(hora)) {
-      return {
-        valido: false,
-        mensaje: 'Horarios disponibles: 8:00 AM, 9:00 AM, 10:00 AM, 11:00 AM'
-      };
-    }
-    
-    return { valido: true };
+  valido: boolean; 
+  mensaje?: string 
+} {
+  const diaSemana = fecha.getDay();
+  
+  if (diaSemana === 0 || diaSemana === 6) {
+    return {
+      valido: false,
+      mensaje: 'Solo se atiende de lunes a viernes (no sábados ni domingos)'
+    };
   }
+
+  const horariosPermitidos = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
+  
+  if (!horariosPermitidos.includes(hora)) {
+    return {
+      valido: false,
+      mensaje: 'Horario no permitido. Horarios disponibles: mañana 8:00-11:00, tarde 14:00-16:00'
+    };
+  }
+  
+  return { valido: true };
+}
 
   private async verificarDisponibilidadAbogado(
     abogadoId: string,
@@ -674,7 +698,7 @@ export class CitasService {
     abogadoId: string,
     fecha: string,
   ): Promise<string[]> {
-    const horariosBase = ['08:00', '09:00', '10:00', '11:00'];
+    const horariosBase = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
     
     const citasDelDia = await this.citaRepository.find({
       where: {
@@ -685,23 +709,18 @@ export class CitasService {
       select: ['hora']
     });
 
-    const horariosOcupados = citasDelDia.map(cita => {
-      const horaCompleta = cita.hora.toString();
-      return horaCompleta.substring(0, 5);
-    });
+    const horariosOcupados = citasDelDia.map(cita => 
+    cita.hora.toString().substring(0, 5)
+  );
     
-    const horariosDisponibles = horariosBase.filter(
-      hora => !horariosOcupados.includes(hora)
-    );
-
-    return horariosDisponibles;
+    return horariosBase.filter(hora => !horariosOcupados.includes(hora));
   }
 
   private async buscarSiguienteHorarioDisponible(
     abogadoId: string,
     fechaPreferida: string,
   ): Promise<{ fecha: string; hora: string; mensaje: string }> {
-    const horariosBase = ['08:00', '09:00', '10:00', '11:00'];
+    const horariosBase = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
     
     const horariosDisponiblesMismoDia = await this.obtenerHorariosDisponibles(
       abogadoId,

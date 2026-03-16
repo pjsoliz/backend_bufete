@@ -9,6 +9,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/auth.decorators';
 import { AuthModule } from '../auth/auth.module';
+import { ForbiddenException } from '@nestjs/common';
 
 // DTOs
 export class CreateUsuarioDto {
@@ -68,6 +69,9 @@ export class UsuariosService {
   ) {}
 
   async create(createUsuarioDto: CreateUsuarioDto): Promise<Usuario> {
+    if (createUsuarioDto.rol === 'admin') {
+    throw new ForbiddenException('No se puede crear un usuario con rol Administrador');
+  }
     // Verificar si el email ya existe
     const existingUser = await this.usuarioRepository.findOne({
       where: { email: createUsuarioDto.email },

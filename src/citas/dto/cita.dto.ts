@@ -18,12 +18,12 @@ export class CreateCitaDto {
   tipoCasoId: string;
 
   @IsUUID('4', { message: 'El ID del tipo de cita debe ser un UUID válido' })
-  @IsNotEmpty({ message: 'El tipo de cita es requerido' })
-  tipoCitaId: string;
+@IsOptional()
+tipoCitaId?: string;
 
   @IsUUID('4', { message: 'El ID de la oficina debe ser un UUID válido' })
-  @IsNotEmpty({ message: 'La oficina es requerida' })
-  oficinaId: string;
+@IsOptional()
+oficinaId?: string;
 
   @IsString({ message: 'La fecha debe ser un string' })
   @IsNotEmpty({ message: 'La fecha es requerida' })
@@ -48,8 +48,8 @@ export class CreateCitaDto {
   urgencia?: string;
 
   @IsEnum(['chatbot', 'panel_web', 'presencial'], { message: 'El origen debe ser: chatbot, panel_web o presencial' })
-  @IsNotEmpty({ message: 'El origen es requerido' })
-  origen: string;
+  @IsOptional()
+  origen?: string;
 
   @IsString()
   @IsOptional()
