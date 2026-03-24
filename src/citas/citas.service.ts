@@ -561,6 +561,51 @@ export class CitasService {
       throw error;
     }
   }
+  async consultarDisponibilidadReal(
+  abogadoNombre: string,
+  fecha: string,
+): Promise<any> {
+  // Buscar abogado por nombre
+  const abogados = await this.abogadoRepository.find({ where: { activo: true } });
+  const abogado = abogados.find(a =>
+    a.nombre.toLowerCase().includes(abogadoNombre.toLowerCase()) ||
+    abogadoNombre.toLowerCase().includes(a.nombre.toLowerCase())
+  );
+
+  if (!abogado) {
+    return {
+      encontrado: false,
+      mensaje: `No se encontró el abogado: ${abogadoNombre}`,
+      horarios_ocupados: [],
+      horarios_disponibles: [],
+    };
+  }
+
+  const horariosBase = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
+
+  const citasDelDia = await this.citaRepository.find({
+    where: {
+      abogadoId: abogado.id,
+      fecha: fecha,
+      estado: In(['pendiente', 'confirmada']),
+    },
+    select: ['hora'],
+  });
+
+  const horariosOcupados = citasDelDia.map(c => c.hora.toString().substring(0, 5));
+  const horariosDisponibles = horariosBase.filter(h => !horariosOcupados.includes(h));
+
+  return {
+    encontrado: true,
+    abogado: abogado.nombre,
+    fecha: fecha,
+    horarios_ocupados: horariosOcupados,
+    horarios_disponibles: horariosDisponibles,
+    mensaje: horariosDisponibles.length > 0
+      ? `${abogado.nombre} tiene ${horariosDisponibles.length} horarios disponibles el ${fecha}`
+      : `${abogado.nombre} no tiene horarios disponibles el ${fecha}`,
+  };
+}
 
   generarHorariosSugeridos(
     urgencia: string,

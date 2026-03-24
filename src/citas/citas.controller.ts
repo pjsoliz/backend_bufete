@@ -247,6 +247,26 @@ async getCitasProximasHora() {
   }
 
   @Public()
+@Post('agente/disponibilidad-real')
+@HttpCode(HttpStatus.OK)
+async consultarDisponibilidadReal(
+  @Body() dto: { abogado_nombre: string; fecha: string },
+): Promise<any> {
+  try {
+    return await this.citasService.consultarDisponibilidadReal(
+      dto.abogado_nombre,
+      dto.fecha,
+    );
+  } catch (error) {
+    return {
+      error: error.message,
+      horarios_disponibles: [],
+      horarios_ocupados: [],
+    };
+  }
+}
+
+  @Public()
   @Get('agente/mis-citas/:user_id_plataforma/:plataforma')
   async obtenerCitasClientePorPlataforma(
     @Param('user_id_plataforma') userId: string,
