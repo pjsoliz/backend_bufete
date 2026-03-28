@@ -15,57 +15,67 @@ export class CitasService {
     private clienteRepository: Repository<Cliente>,
     @InjectRepository(Abogado)
     private abogadoRepository: Repository<Abogado>,
-  ) {}
+  ) { }
 
   async create(createCitaDto: CreateCitaDto): Promise<Cita> {
-  const hoy = new Date().toISOString().split('T')[0];
-  
-  if (createCitaDto.fecha < hoy) {
-    throw new BadRequestException('No se puede crear una cita en una fecha pasada');
-  }
+    // ✅ Obtener fecha actual en Bolivia (UTC-4)
+    const ahoraUTC = new Date();
+    const ahoraBolivia = new Date(ahoraUTC.getTime() - 4 * 60 * 60 * 1000);
+    const hoy = ahoraBolivia.toISOString().split('T')[0]; // "YYYY-MM-DD" hora Bolivia
 
-  createCitaDto.origen = createCitaDto.origen || 'panel_web';
-  
-  await this.validateCitaDisponibilidad(
-    createCitaDto.abogadoId,
-    createCitaDto.fecha,
-    createCitaDto.hora,
-  );
+    // ✅ Validar que no sea fecha pasada
+    if (createCitaDto.fecha < hoy) {
+      throw new BadRequestException('No se puede crear una cita en una fecha pasada');
+    }
 
-  await this.validateRelaciones(createCitaDto);
+    // ✅ Validar que no supere 60 días desde hoy
+    const limite60Dias = new Date(ahoraBolivia.getTime() + 60 * 24 * 60 * 60 * 1000);
+    const limite60DiasStr = limite60Dias.toISOString().split('T')[0];
+    if (createCitaDto.fecha > limite60DiasStr) {
+      throw new BadRequestException('No se puede crear una cita con más de 60 días de anticipación');
+    }
 
-  console.log('🔍 DEBUG - Creando cita con fecha:', createCitaDto.fecha);
+    createCitaDto.origen = createCitaDto.origen || 'panel_web';
 
-  // ✅ USAR SQL DIRECTO para evitar conversión de TypeORM
-  const result = await this.citaRepository.query(`
+    await this.validateCitaDisponibilidad(
+      createCitaDto.abogadoId,
+      createCitaDto.fecha,
+      createCitaDto.hora,
+    );
+
+    await this.validateRelaciones(createCitaDto);
+
+    console.log('🔍 DEBUG - Creando cita con fecha:', createCitaDto.fecha);
+
+    const result = await this.citaRepository.query(`
     INSERT INTO citas (
-      id, cliente_id, abogado_id, area_derecho_id, tipo_caso_id, 
-      tipo_cita_id, oficina_id, fecha, hora, descripcion, 
-      notas_adicionales, urgencia, origen, telefono_contacto, 
+      id, cliente_id, abogado_id, area_derecho_id, tipo_caso_id,
+      tipo_cita_id, oficina_id, fecha, hora, descripcion,
+      notas_adicionales, urgencia, origen, telefono_contacto,
       recordatorio_enviado, estado, created_at, updated_at
     ) VALUES (
       gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7::date, $8, $9, $10, $11, $12, $13, false, 'pendiente', NOW(), NOW()
     ) RETURNING id
   `, [
-    createCitaDto.clienteId,
-    createCitaDto.abogadoId,
-    createCitaDto.areaDerechoId,
-    createCitaDto.tipoCasoId,
-    createCitaDto.tipoCitaId,
-    createCitaDto.oficinaId,
-    createCitaDto.fecha,
-    createCitaDto.hora,
-    createCitaDto.descripcion || null,
-    createCitaDto.notasAdicionales || null,
-    createCitaDto.urgencia || 'media',
-    createCitaDto.origen,
-    createCitaDto.telefonoContacto || null
-  ]);
+      createCitaDto.clienteId,
+      createCitaDto.abogadoId,
+      createCitaDto.areaDerechoId,
+      createCitaDto.tipoCasoId,
+      createCitaDto.tipoCitaId,
+      createCitaDto.oficinaId,
+      createCitaDto.fecha,
+      createCitaDto.hora,
+      createCitaDto.descripcion || null,
+      createCitaDto.notasAdicionales || null,
+      createCitaDto.urgencia || 'media',
+      createCitaDto.origen,
+      createCitaDto.telefonoContacto || null,
+    ]);
 
-  console.log('✅ Cita creada con ID:', result[0].id);
+    console.log('✅ Cita creada con ID:', result[0].id);
 
-  return await this.findOne(result[0].id);
-}
+    return await this.findOne(result[0].id);
+  }
 
   async findAll(filterDto: FilterCitasDto): Promise<Cita[]> {
     const query = this.citaRepository
@@ -224,9 +234,9 @@ export class CitasService {
     citaIdExcluir?: string,
   ): Promise<void> {
     const horaNormalizada = hora.toString().substring(0, 5);
-    
+
     const fechaString = typeof fecha === 'string' ? fecha : fecha.toISOString().split('T')[0];
-    
+
     const citasDelDia = await this.citaRepository.find({
       where: {
         abogadoId: abogadoId,
@@ -234,7 +244,7 @@ export class CitasService {
         estado: In(['pendiente', 'confirmada'])
       }
     });
-    
+
     const citaExistente = citasDelDia.find(cita => {
       if (citaIdExcluir && cita.id === citaIdExcluir) {
         return false;
@@ -349,14 +359,14 @@ export class CitasService {
           anterior: cliente.nombreCompleto,
           nuevo: data.nombre_completo
         });
-        
+
         // Actualizar datos del cliente con los nuevos valores
         cliente.nombreCompleto = data.nombre_completo;
         cliente.telefono = data.telefono;
         if (data.email) {
           cliente.email = data.email;
         }
-        
+
         // Guardar los cambios
         cliente = await this.clienteRepository.save(cliente);
         console.log('✅ Cliente actualizado correctamente:', cliente.nombreCompleto);
@@ -381,32 +391,32 @@ export class CitasService {
 
       if (data.abogado_nombre) {
         console.log('🔍 Buscando abogado por nombre:', data.abogado_nombre);
-        
+
         // Primero intentar búsqueda exacta
         abogado = await this.abogadoRepository.findOne({
-          where: { 
+          where: {
             nombre: data.abogado_nombre,
             activo: true
           }
         });
-        
+
         // Si no se encontró, buscar por coincidencia parcial
         if (!abogado) {
           const todosAbogados = await this.abogadoRepository.find({
-            where: { 
+            where: {
               activo: true
             }
           });
-          
+
           // Buscar coincidencia parcial (case insensitive)
           abogado = todosAbogados.find(a => {
             const nombreAbogadoLower = a.nombre.toLowerCase();
             const nombreBuscadoLower = data.abogado_nombre.toLowerCase();
-            
+
             return nombreAbogadoLower.includes(nombreBuscadoLower) ||
-                   nombreBuscadoLower.includes(nombreAbogadoLower);
+              nombreBuscadoLower.includes(nombreAbogadoLower);
           });
-          
+
           if (abogado) {
             console.log('✅ Abogado encontrado por coincidencia parcial:', abogado.nombre);
           }
@@ -424,7 +434,7 @@ export class CitasService {
 
       const [year, month, day] = data.fecha.split('-').map(Number);
       const [horas, minutos] = data.hora.split(':').map(Number);
-      
+
       const fechaHoraCita = new Date(year, month - 1, day, horas, minutos, 0, 0);
       const ahora = new Date();
 
@@ -435,7 +445,7 @@ export class CitasService {
       console.log('  ⌛ Diferencia (min):', Math.round((fechaHoraCita.getTime() - ahora.getTime()) / 1000 / 60));
 
       const unMinutoAtras = new Date(ahora.getTime() - 60 * 1000);
-      
+
       if (fechaHoraCita <= unMinutoAtras) {
         throw new BadRequestException(
           'No se pueden crear citas en el pasado. Por favor, elija una fecha y hora futura.'
@@ -459,13 +469,13 @@ export class CitasService {
       }
 
       const horarioValido = this.validarHorarioLaboral(data.hora, fechaHoraCita);
-      
+
       if (!horarioValido.valido) {
         const horariosDisponibles = await this.obtenerHorariosDisponibles(
           abogado.id,
           data.fecha
         );
-        
+
         throw new BadRequestException(
           `${horarioValido.mensaje}. Horarios disponibles: ${horariosDisponibles.join(', ')}`
         );
@@ -483,7 +493,7 @@ export class CitasService {
             abogado.id,
             data.fecha
           );
-          
+
           if (horariosDisponibles.length > 0) {
             const listaHorarios = horariosDisponibles.join(', ');
             throw new BadRequestException(
@@ -494,7 +504,7 @@ export class CitasService {
               abogado.id,
               data.fecha
             );
-            
+
             throw new BadRequestException(
               `${disponibilidad.mensaje}\n\n${siguiente.mensaje}`
             );
@@ -545,9 +555,9 @@ export class CitasService {
         },
         abogado: abogado
           ? {
-              id: abogado.id,
-              nombre: abogado.nombre,
-            }
+            id: abogado.id,
+            nombre: abogado.nombre,
+          }
           : null,
         especialidad: {
           id: areaDerecho.id,
@@ -562,50 +572,50 @@ export class CitasService {
     }
   }
   async consultarDisponibilidadReal(
-  abogadoNombre: string,
-  fecha: string,
-): Promise<any> {
-  // Buscar abogado por nombre
-  const abogados = await this.abogadoRepository.find({ where: { activo: true } });
-  const abogado = abogados.find(a =>
-    a.nombre.toLowerCase().includes(abogadoNombre.toLowerCase()) ||
-    abogadoNombre.toLowerCase().includes(a.nombre.toLowerCase())
-  );
+    abogadoNombre: string,
+    fecha: string,
+  ): Promise<any> {
+    // Buscar abogado por nombre
+    const abogados = await this.abogadoRepository.find({ where: { activo: true } });
+    const abogado = abogados.find(a =>
+      a.nombre.toLowerCase().includes(abogadoNombre.toLowerCase()) ||
+      abogadoNombre.toLowerCase().includes(a.nombre.toLowerCase())
+    );
 
-  if (!abogado) {
+    if (!abogado) {
+      return {
+        encontrado: false,
+        mensaje: `No se encontró el abogado: ${abogadoNombre}`,
+        horarios_ocupados: [],
+        horarios_disponibles: [],
+      };
+    }
+
+    const horariosBase = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
+
+    const citasDelDia = await this.citaRepository.find({
+      where: {
+        abogadoId: abogado.id,
+        fecha: fecha,
+        estado: In(['pendiente', 'confirmada']),
+      },
+      select: ['hora'],
+    });
+
+    const horariosOcupados = citasDelDia.map(c => c.hora.toString().substring(0, 5));
+    const horariosDisponibles = horariosBase.filter(h => !horariosOcupados.includes(h));
+
     return {
-      encontrado: false,
-      mensaje: `No se encontró el abogado: ${abogadoNombre}`,
-      horarios_ocupados: [],
-      horarios_disponibles: [],
+      encontrado: true,
+      abogado: abogado.nombre,
+      fecha: fecha,
+      horarios_ocupados: horariosOcupados,
+      horarios_disponibles: horariosDisponibles,
+      mensaje: horariosDisponibles.length > 0
+        ? `${abogado.nombre} tiene ${horariosDisponibles.length} horarios disponibles el ${fecha}`
+        : `${abogado.nombre} no tiene horarios disponibles el ${fecha}`,
     };
   }
-
-  const horariosBase = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
-
-  const citasDelDia = await this.citaRepository.find({
-    where: {
-      abogadoId: abogado.id,
-      fecha: fecha,
-      estado: In(['pendiente', 'confirmada']),
-    },
-    select: ['hora'],
-  });
-
-  const horariosOcupados = citasDelDia.map(c => c.hora.toString().substring(0, 5));
-  const horariosDisponibles = horariosBase.filter(h => !horariosOcupados.includes(h));
-
-  return {
-    encontrado: true,
-    abogado: abogado.nombre,
-    fecha: fecha,
-    horarios_ocupados: horariosOcupados,
-    horarios_disponibles: horariosDisponibles,
-    mensaje: horariosDisponibles.length > 0
-      ? `${abogado.nombre} tiene ${horariosDisponibles.length} horarios disponibles el ${fecha}`
-      : `${abogado.nombre} no tiene horarios disponibles el ${fecha}`,
-  };
-}
 
   generarHorariosSugeridos(
     urgencia: string,
@@ -684,30 +694,30 @@ export class CitasService {
   // MÉTODOS DE VALIDACIÓN DE HORARIOS
   // ============================================
 
-  private validarHorarioLaboral(hora: string, fecha: Date): { 
-  valido: boolean; 
-  mensaje?: string 
-} {
-  const diaSemana = fecha.getDay();
-  
-  if (diaSemana === 0 || diaSemana === 6) {
-    return {
-      valido: false,
-      mensaje: 'Solo se atiende de lunes a viernes (no sábados ni domingos)'
-    };
-  }
+  private validarHorarioLaboral(hora: string, fecha: Date): {
+    valido: boolean;
+    mensaje?: string
+  } {
+    const diaSemana = fecha.getDay();
 
-  const horariosPermitidos = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
-  
-  if (!horariosPermitidos.includes(hora)) {
-    return {
-      valido: false,
-      mensaje: 'Horario no permitido. Horarios disponibles: mañana 8:00-11:00, tarde 14:00-16:00'
-    };
+    if (diaSemana === 0 || diaSemana === 6) {
+      return {
+        valido: false,
+        mensaje: 'Solo se atiende de lunes a viernes (no sábados ni domingos)'
+      };
+    }
+
+    const horariosPermitidos = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
+
+    if (!horariosPermitidos.includes(hora)) {
+      return {
+        valido: false,
+        mensaje: 'Horario no permitido. Horarios disponibles: mañana 8:00-11:00, tarde 14:00-16:00'
+      };
+    }
+
+    return { valido: true };
   }
-  
-  return { valido: true };
-}
 
   private async verificarDisponibilidadAbogado(
     abogadoId: string,
@@ -721,9 +731,9 @@ export class CitasService {
         estado: In(['pendiente', 'confirmada'])
       }
     });
-    
+
     const horaNormalizada = hora.substring(0, 5);
-    
+
     const citaExistente = citasDelDia.find(cita => {
       const horaCita = cita.hora.toString().substring(0, 5);
       return horaCita === horaNormalizada;
@@ -744,7 +754,7 @@ export class CitasService {
     fecha: string,
   ): Promise<string[]> {
     const horariosBase = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
-    
+
     const citasDelDia = await this.citaRepository.find({
       where: {
         abogadoId: abogadoId,
@@ -754,10 +764,10 @@ export class CitasService {
       select: ['hora']
     });
 
-    const horariosOcupados = citasDelDia.map(cita => 
-    cita.hora.toString().substring(0, 5)
-  );
-    
+    const horariosOcupados = citasDelDia.map(cita =>
+      cita.hora.toString().substring(0, 5)
+    );
+
     return horariosBase.filter(hora => !horariosOcupados.includes(hora));
   }
 
@@ -766,47 +776,47 @@ export class CitasService {
     fechaPreferida: string,
   ): Promise<{ fecha: string; hora: string; mensaje: string }> {
     const horariosBase = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
-    
+
     const horariosDisponiblesMismoDia = await this.obtenerHorariosDisponibles(
       abogadoId,
       fechaPreferida
     );
-    
+
     if (horariosDisponiblesMismoDia.length > 0) {
       const [year, month, day] = fechaPreferida.split('-').map(Number);
       const fechaObj = new Date(year, month - 1, day);
-      
+
       const fechaFormateada = fechaObj.toLocaleDateString('es-BO', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
         day: 'numeric'
       });
-      
+
       const listaHorarios = horariosDisponiblesMismoDia.map(h => `• ${h}`).join('\n');
-      
+
       return {
         fecha: fechaPreferida,
         hora: horariosDisponiblesMismoDia[0],
         mensaje: `💡 Horarios disponibles para el ${fechaFormateada}:\n${listaHorarios}\n\nPor favor, elija uno de estos horarios.`
       };
     }
-    
+
     const [year, month, day] = fechaPreferida.split('-').map(Number);
     let fechaBusqueda = new Date(year, month - 1, day);
     fechaBusqueda.setDate(fechaBusqueda.getDate() + 1);
-    
+
     for (let i = 0; i < 15; i++) {
       const diaSemana = fechaBusqueda.getDay();
-      
+
       if (diaSemana !== 0 && diaSemana !== 6) {
         const fechaBusquedaStr = fechaBusqueda.toISOString().split('T')[0];
-        
+
         const horariosDisponibles = await this.obtenerHorariosDisponibles(
           abogadoId,
           fechaBusquedaStr
         );
-        
+
         if (horariosDisponibles.length > 0) {
           const fechaFormateada = fechaBusqueda.toLocaleDateString('es-BO', {
             weekday: 'long',
@@ -814,9 +824,9 @@ export class CitasService {
             month: 'long',
             day: 'numeric'
           });
-          
+
           const listaHorarios = horariosDisponibles.map(h => `• ${h}`).join('\n');
-          
+
           return {
             fecha: fechaBusquedaStr,
             hora: horariosDisponibles[0],
@@ -824,10 +834,10 @@ export class CitasService {
           };
         }
       }
-      
+
       fechaBusqueda.setDate(fechaBusqueda.getDate() + 1);
     }
-    
+
     return {
       fecha: '',
       hora: '',
@@ -845,7 +855,7 @@ export class CitasService {
       const fechaStr = typeof cita.fecha === 'string' ? cita.fecha : cita.fecha.toISOString().split('T')[0];
       const [year, month, day] = fechaStr.split('-').map(Number);
       const fecha = new Date(year, month - 1, day);
-      
+
       const fechaFormateada = fecha.toLocaleDateString('es-BO', {
         year: 'numeric',
         month: 'long',
@@ -878,5 +888,49 @@ export class CitasService {
     } catch (error) {
       console.error('Error al notificar al abogado:', error);
     }
+  }
+  // ============================================
+  // AUTO-CANCELACIÓN DE CITAS PENDIENTES VENCIDAS
+  // ============================================
+
+  async cancelarCitasPendientesVencidas(): Promise<{ canceladas: number }> {
+    // Fecha/hora actual en Bolivia (UTC-4)
+    const ahoraUTC = new Date();
+    const ahoraBolivia = new Date(ahoraUTC.getTime() - 4 * 60 * 60 * 1000);
+    const hoyBolivia = ahoraBolivia.toISOString().split('T')[0];
+    const horaBolivia = ahoraBolivia.toISOString().split('T')[1].substring(0, 5); // "HH:MM"
+
+    console.log(`🕐 Auto-cancelación ejecutada a las ${hoyBolivia} ${horaBolivia} (Bolivia)`);
+
+    // Buscar citas pendientes cuya fecha ya pasó, o cuya fecha es hoy pero la hora ya pasó
+    const citasVencidas = await this.citaRepository.query(`
+    SELECT id, fecha, hora FROM citas
+    WHERE estado = 'pendiente'
+      AND (
+        fecha < $1
+        OR (fecha = $1 AND hora < $2)
+      )
+  `, [hoyBolivia, horaBolivia]);
+
+    if (citasVencidas.length === 0) {
+      console.log('✅ No hay citas pendientes vencidas');
+      return { canceladas: 0 };
+    }
+
+    const ids = citasVencidas.map((c: any) => c.id);
+
+    await this.citaRepository.query(`
+    UPDATE citas
+    SET
+      estado = 'cancelada',
+      motivo_cancelacion = 'Cancelada automáticamente por no confirmar antes de la hora de la cita',
+      fecha_cancelacion = NOW(),
+      updated_at = NOW()
+    WHERE id = ANY($1::uuid[])
+  `, [ids]);
+
+    console.log(`❌ Auto-canceladas ${ids.length} citas pendientes vencidas:`, ids);
+
+    return { canceladas: ids.length };
   }
 }
