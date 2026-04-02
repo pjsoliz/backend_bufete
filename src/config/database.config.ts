@@ -12,6 +12,6 @@ export const getDatabaseConfig = (
   database: configService.get<string>('DB_DATABASE'),
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   synchronize: false, // IMPORTANTE: false en producción, las tablas ya existen
-  logging: configService.get<string>('NODE_ENV') === 'development',
+  logging: false, // Desactivado para evitar logs extensos en consola
   ssl: configService.get<string>('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
 });

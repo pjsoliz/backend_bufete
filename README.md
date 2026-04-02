@@ -9,7 +9,7 @@ Sistema de gestión de citas que incluye:
 - Autenticación con JWT
 - Roles de usuario (admin y asistente_legal)
 - Integración con chatbot (N8N) para creación automática de citas
-- Reportes y estadísticas
+- Analíticas y estadísticas
 - Gestión de clientes, abogados, oficinas y catálogos
 
 ## 🚀 Tecnologías

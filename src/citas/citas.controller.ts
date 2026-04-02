@@ -181,7 +181,7 @@ async getCitasProximasHora() {
       };
     } catch (error) {
       return {
-        error: error.message,
+        error: (error as any).message,
         existe: false,
       };
     }
@@ -211,7 +211,7 @@ async getCitasProximasHora() {
     } catch (error) {
       return {
         success: false,
-        error: error.message,
+        error: (error as any).message,
       };
     }
   }
@@ -240,7 +240,7 @@ async getCitasProximasHora() {
       };
     } catch (error) {
       return {
-        error: error.message,
+        error: (error as any).message,
         horarios_sugeridos: [],
       };
     }
@@ -259,7 +259,7 @@ async consultarDisponibilidadReal(
     );
   } catch (error) {
     return {
-      error: error.message,
+      error: (error as any).message,
       horarios_disponibles: [],
       horarios_ocupados: [],
     };
@@ -304,7 +304,7 @@ async consultarDisponibilidadReal(
       };
     } catch (error) {
       return {
-        error: error.message,
+        error: (error as any).message,
         citas: [],
       };
     }
@@ -352,7 +352,7 @@ async consultarDisponibilidadReal(
       return { success: true, mensaje: 'Notificaciones enviadas', data: result };
     } catch (error) {
       console.error('Error al notificar cambio de estado:', error);
-      return { success: false, mensaje: 'Error al enviar notificaciones', error: error.message };
+      return { success: false, mensaje: 'Error al enviar notificaciones', error: (error as any).message };
     }
   }
 }
