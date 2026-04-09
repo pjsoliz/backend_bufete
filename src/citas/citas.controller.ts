@@ -55,7 +55,7 @@ export class CitasController {
     return this.citasService.findAll(filterDto);
   }
   // ============================================
-  // 🆕 ENDPOINTS PARA NOTIFICACIONES Y RECORDATORIOS
+  //  ENDPOINTS PARA NOTIFICACIONES Y RECORDATORIOS
   // ============================================
 
   @Public()
@@ -63,7 +63,7 @@ export class CitasController {
 async getCitasProximasHora() {
   const ahora = new Date();
   
-  // ⚠️ TEMPORAL PARA PRUEBAS: 70-74 horas (aproximadamente 3 días)
+  // ️ TEMPORAL PARA PRUEBAS: 70-74 horas (aproximadamente 3 días)
   const unaHoraDespues = new Date(ahora.getTime() + 1 * 60 * 60 * 1000);
   const dosHorasDespues = new Date(ahora.getTime() + 2 * 60 * 60 * 1000);
   
@@ -77,7 +77,7 @@ async getCitasProximasHora() {
   });
   
   const citasProximas = citas.filter(cita => {
-    // ✅ CONVERTIR FECHA STRING SIN ZONA HORARIA
+    // CONVERTIR FECHA STRING SIN ZONA HORARIA
     const [year, month, day] = cita.fecha.split('-').map(Number);
     const [horas, minutos] = cita.hora.split(':').map(Number);
     const fechaHoraCita = new Date(year, month - 1, day, horas, minutos, 0, 0);

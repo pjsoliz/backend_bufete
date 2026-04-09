@@ -26,7 +26,6 @@ export class Usuario {
   @Column({ type: 'timestamp', name: 'ultimo_acceso', nullable: true })
   ultimoAcceso: Date;
 
-  // ⭐ AGREGAR ESTOS 2 CAMPOS PARA RECUPERAR CONTRASEÑA
   @Column({ type: 'varchar', length: 255, name: 'reset_password_token', nullable: true })
   resetPasswordToken: string | null;
 

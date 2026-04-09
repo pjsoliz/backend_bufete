@@ -42,7 +42,6 @@ export class AuthController {
     return { message: 'Logout exitoso' };
   }
 
-  // ⭐ NUEVOS ENDPOINTS PARA RECUPERAR CONTRASEÑA
   
   @Public()
   @Post('recuperar-contrasena')

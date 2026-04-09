@@ -24,7 +24,7 @@ async function bootstrap() {
     }),
   );
 
-  // ⭐ CONFIGURACIÓN DE SWAGGER
+  // CONFIGURACIÓN DE SWAGGER
   const config = new DocumentBuilder()
     .setTitle('Bufete Genesis API')
     .setDescription('API para sistema de gestión de citas del Bufete Genesis Integrales')
@@ -39,13 +39,13 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
-  // ⭐ FIN CONFIGURACIÓN
+  // FIN CONFIGURACIÓN
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
 
-  console.log(`🚀 Servidor corriendo en: http://localhost:${port}/api`);
-  console.log(`📚 Documentación Swagger: http://localhost:${port}/api/docs`);
+  console.log(` Servidor corriendo en: http://localhost:${port}/api`);
+  console.log(` Documentación Swagger: http://localhost:${port}/api/docs`);
   console.log(`📊 Entorno: ${process.env.NODE_ENV || 'development'}`);
 }
 

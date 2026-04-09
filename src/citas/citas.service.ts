@@ -18,17 +18,17 @@ export class CitasService {
   ) { }
 
   async create(createCitaDto: CreateCitaDto): Promise<Cita> {
-    // ✅ Obtener fecha actual en Bolivia (UTC-4)
+    // Obtener fecha actual en Bolivia (UTC-4)
     const ahoraUTC = new Date();
     const ahoraBolivia = new Date(ahoraUTC.getTime() - 4 * 60 * 60 * 1000);
     const hoy = ahoraBolivia.toISOString().split('T')[0]; // "YYYY-MM-DD" hora Bolivia
 
-    // ✅ Validar que no sea fecha pasada
+    // Validar que no sea fecha pasada
     if (createCitaDto.fecha < hoy) {
       throw new BadRequestException('No se puede crear una cita en una fecha pasada');
     }
 
-    // ✅ Validar que no supere 60 días desde hoy
+    // Validar que no supere 60 días desde hoy
     const limite60Dias = new Date(ahoraBolivia.getTime() + 60 * 24 * 60 * 60 * 1000);
     const limite60DiasStr = limite60Dias.toISOString().split('T')[0];
     if (createCitaDto.fecha > limite60DiasStr) {
@@ -336,14 +336,14 @@ export class CitasService {
     hora: string;
   }): Promise<any> {
     try {
-      // 🔍 BUSCAR CLIENTE EXISTENTE
+      // BUSCAR CLIENTE EXISTENTE
       let cliente = await this.buscarClientePorPlataforma(
         data.user_id_plataforma,
         data.plataforma,
       );
 
       if (!cliente) {
-        // ✅ CLIENTE NUEVO - CREAR
+        // CLIENTE NUEVO - CREAR
         console.log('👤 Cliente nuevo, creando...');
         cliente = await this.crearClienteDesdeAgente({
           user_id_plataforma: data.user_id_plataforma,
@@ -354,7 +354,7 @@ export class CitasService {
         });
         console.log('✅ Cliente creado:', cliente.nombreCompleto);
       } else {
-        // 🔄 CLIENTE EXISTENTE - ACTUALIZAR DATOS
+        // CLIENTE EXISTENTE - ACTUALIZAR DATOS
         console.log('🔄 Cliente existente encontrado:', {
           anterior: cliente.nombreCompleto,
           nuevo: data.nombre_completo
@@ -862,7 +862,7 @@ export class CitasService {
         day: 'numeric',
       });
 
-      const mensaje = `🔔 *Nueva Cita Asignada*\n\n` +
+      const mensaje = ` *Nueva Cita Asignada*\n\n` +
         `👤 Cliente: ${cliente.nombreCompleto}\n` +
         `📞 Teléfono: ${cliente.telefono}\n` +
         `⚖️ Especialidad: ${areaDerecho.nombre}\n` +
@@ -870,7 +870,7 @@ export class CitasService {
         `⏰ Hora: ${cita.hora}\n` +
         `📝 Descripción: ${cita.descripcion}\n` +
         `🔴 Urgencia: ${cita.urgencia}\n\n` +
-        `📍 *Bufete Genesis Integrales*\n` +
+        ` *Bufete Genesis Integrales*\n` +
         `Cochabamba, Bolivia`;
 
       await fetch(

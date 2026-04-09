@@ -111,7 +111,7 @@ export class AuthService {
     return null;
   }
 
-  // ⭐ RECUPERAR CONTRASEÑA - Genera token y lo guarda en BD
+  // RECUPERAR CONTRASEÑA - Genera token y lo guarda en BD
   async recuperarContrasena(email: string): Promise<void> {
     const usuario = await this.usuarioRepository.findOne({
       where: { email },
@@ -136,7 +136,6 @@ export class AuthService {
       resetPasswordExpires: expiresAt,
     });
 
-    // 🔥 AQUÍ DEBERÍAS ENVIAR EL EMAIL
     // Por ahora, solo mostramos el token en los logs para testing
     console.log('='.repeat(60));
     console.log('📧 EMAIL DE RECUPERACIÓN DE CONTRASEÑA');
@@ -149,10 +148,9 @@ export class AuthService {
     console.log('='.repeat(60));
 
     // TODO: Implementar envío de email real con nodemailer o servicio de email
-    // await this.emailService.sendPasswordResetEmail(usuario.email, resetToken);
   }
 
-  // ⭐ RESTABLECER CONTRASEÑA - Valida token y cambia contraseña
+  // RESTABLECER CONTRASEÑA - Valida token y cambia contraseña
   async restablecerContrasena(token: string, nuevaContrasena: string): Promise<void> {
     // Buscar usuarios con token de reset válido
     const usuarios = await this.usuarioRepository.find({

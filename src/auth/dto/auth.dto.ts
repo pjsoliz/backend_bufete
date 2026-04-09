@@ -44,7 +44,6 @@ export class LoginResponseDto {
   };
 }
 
-// ⭐ AGREGAR ESTOS 2 NUEVOS DTOs
 
 export class RecuperarContrasenaDto {
   @IsEmail({}, { message: 'El email debe ser válido' })
