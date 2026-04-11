@@ -798,7 +798,7 @@ export class CitasService {
       return {
         fecha: fechaPreferida,
         hora: horariosDisponiblesMismoDia[0],
-        mensaje: `💡 Horarios disponibles para el ${fechaFormateada}:\n${listaHorarios}\n\nPor favor, elija uno de estos horarios.`
+        mensaje: `Horarios disponibles para el ${fechaFormateada}:\n${listaHorarios}\n\nPor favor, elija uno de estos horarios.`
       };
     }
 
@@ -830,7 +830,7 @@ export class CitasService {
           return {
             fecha: fechaBusquedaStr,
             hora: horariosDisponibles[0],
-            mensaje: `💡 El día solicitado está completamente ocupado.\n\nEl siguiente día disponible es:\n📅 ${fechaFormateada}\n\nHorarios disponibles:\n${listaHorarios}\n\nPor favor, elija uno de estos horarios.`
+            mensaje: `El día solicitado está completamente ocupado.\n\nEl siguiente día disponible es:\n${fechaFormateada}\n\nHorarios disponibles:\n${listaHorarios}\n\nPor favor, elija uno de estos horarios.`
           };
         }
       }
@@ -841,7 +841,7 @@ export class CitasService {
     return {
       fecha: '',
       hora: '',
-      mensaje: '❌ No hay disponibilidad en los próximos 15 días hábiles. Por favor, contacte directamente al bufete.'
+      mensaje: 'No hay disponibilidad en los próximos 15 días hábiles. Por favor, contacte directamente al bufete.'
     };
   }
 
@@ -862,15 +862,16 @@ export class CitasService {
         day: 'numeric',
       });
 
-      const mensaje = ` *Nueva Cita Asignada*\n\n` +
-        `👤 Cliente: ${cliente.nombreCompleto}\n` +
-        `📞 Teléfono: ${cliente.telefono}\n` +
-        `⚖️ Especialidad: ${areaDerecho.nombre}\n` +
-        `📅 Fecha: ${fechaFormateada}\n` +
-        `⏰ Hora: ${cita.hora}\n` +
-        `📝 Descripción: ${cita.descripcion}\n` +
-        `🔴 Urgencia: ${cita.urgencia}\n\n` +
-        ` *Bufete Genesis Integrales*\n` +
+      const mensaje = `*NOTIFICACIÓN DE CITA*\n\n` +
+        `• Cliente: ${cliente.nombreCompleto}\n` +
+        `• Teléfono: ${cliente.telefono}\n` +
+        `• Especialidad: ${areaDerecho.nombre}\n` +
+        `• Fecha: ${fechaFormateada}\n` +
+        `• Hora: ${cita.hora}\n` +
+        `• Urgencia: ${cita.urgencia.toUpperCase()}\n\n` +
+        `*Descripción:*\n${cita.descripcion || 'Sin descripción'}\n\n` +
+        `---\n` +
+        `*Bufete Genesis Integrales*\n` +
         `Cochabamba, Bolivia`;
 
       await fetch(
