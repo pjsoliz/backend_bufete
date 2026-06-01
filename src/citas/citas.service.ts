@@ -237,6 +237,14 @@ export class CitasService {
 
     const fechaString = typeof fecha === 'string' ? fecha : fecha.toISOString().split('T')[0];
 
+    // Validar que no sea fin de semana (sábado o domingo)
+    const [year, month, day] = fechaString.split('-').map(Number);
+    const fechaObj = new Date(year, month - 1, day);
+    const diaSemana = fechaObj.getDay(); // 0: Domingo, 6: Sábado
+    if (diaSemana === 0 || diaSemana === 6) {
+      throw new BadRequestException('No se pueden programar citas los fines de semana (sábados o domingos)');
+    }
+
     const citasDelDia = await this.citaRepository.find({
       where: {
         abogadoId: abogadoId,
@@ -628,17 +636,29 @@ export class CitasService {
     if (urgencia === 'alta') diasAdelante = 1;
     if (urgencia === 'media') diasAdelante = 3;
 
-    for (let i = 0; i < 3; i++) {
-      const fecha = new Date(hoy);
-      fecha.setDate(fecha.getDate() + diasAdelante + i);
-      const fechaStr = fecha.toISOString().split('T')[0];
+    let diasEncontrados = 0;
+    let intento = 0;
 
+    // Buscar los próximos 3 días laborables (excluyendo sábados y domingos)
+    while (diasEncontrados < 3 && intento < 30) {
+      intento++;
+      const fecha = new Date(hoy);
+      fecha.setDate(fecha.getDate() + diasAdelante + (intento - 1));
+      const diaSemana = fecha.getDay();
+
+      if (diaSemana === 0 || diaSemana === 6) {
+        // Saltar fines de semana
+        continue;
+      }
+
+      const fechaStr = fecha.toISOString().split('T')[0];
       sugerencias.push(
         { fecha: fechaStr, hora: '09:00', disponible: true },
         { fecha: fechaStr, hora: '11:00', disponible: true },
         { fecha: fechaStr, hora: '14:00', disponible: true },
         { fecha: fechaStr, hora: '16:00', disponible: true },
       );
+      diasEncontrados++;
     }
 
     return sugerencias;
